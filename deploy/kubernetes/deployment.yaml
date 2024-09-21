@@ -23,9 +23,9 @@ spec:
         - name: app
           image: khaosl33t/pgsql-prometheus-exporter:1.0.1
           imagePullPolicy: IfNotPresent
-          env:
-            - name: POSTGRESQL_URL_TEMPLATE
-              value: ${URL_TEMPLATE}
+          envFrom:
+            - secretRef:
+                name: pgsql-prometheus-exporter-secret
           ports:
             - containerPort: 9042
               protocol: TCP
