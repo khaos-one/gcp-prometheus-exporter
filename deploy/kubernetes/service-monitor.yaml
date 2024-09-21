@@ -1,0 +1,12 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: pgsql-prometheus-exporter-monitor
+  labels:
+    app: pgsql-prometheus-exporter
+spec:
+  selector:
+    matchLabels:
+      app: pgsql-prometheus-exporter
+  endpoints:
+    - port: prometheus

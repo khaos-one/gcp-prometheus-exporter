@@ -1,0 +1,36 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pgsql-prometheus-exporter
+  labels:
+    app: pgsql-prometheus-exporter
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: pgsql-prometheus-exporter
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+  revisionHistoryLimit: 1
+  template:
+    metadata:
+      labels:
+        app: pgsql-prometheus-exporter
+    spec:
+      containers:
+        - name: app
+          image: khaosl33t/pgsql-prometheus-exporter:1.0.1
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: POSTGRESQL_URL_TEMPLATE
+              value: ${URL_TEMPLATE}
+          ports:
+            - containerPort: 9042
+              protocol: TCP
+          resources:
+            requests:
+              memory: "128Mi"
+            limits:
+              memory: "256Mi"
