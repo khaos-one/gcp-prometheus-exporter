@@ -21,7 +21,7 @@ spec:
     spec:
       containers:
         - name: app
-          image: khaosl33t/pgsql-prometheus-exporter:1.0.1
+          image: khaosl33t/pgsql-prometheus-exporter:1.0.2
           imagePullPolicy: IfNotPresent
           envFrom:
             - secretRef:
