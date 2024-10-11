@@ -21,27 +21,27 @@ type databaseTable struct {
 	rowsCountEstimateMetric *prometheus.Desc
 }
 
-func createSizeMetric(tableName, databaseName string) *prometheus.Desc {
+func createSizeMetric(tableName, databaseName string, instanceName string) *prometheus.Desc {
 	return prometheus.NewDesc(
 		"pgsql_table_size",
 		"Table size in bytes",
 		nil,
-		prometheus.Labels{"table": tableName, "database": databaseName},
+		prometheus.Labels{"table": tableName, "database": databaseName, "instance": instanceName},
 	)
 }
 
-func createRowsCountEstimateMetric(tableName, databaseName string) *prometheus.Desc {
+func createRowsCountEstimateMetric(tableName, databaseName string, instanceName string) *prometheus.Desc {
 	return prometheus.NewDesc(
 		"pgsql_table_rows_count_estimate",
 		"Rows count estimate (might be not accurate)",
 		nil,
-		prometheus.Labels{"table": tableName, "database": databaseName},
+		prometheus.Labels{"table": tableName, "database": databaseName, "instance": instanceName},
 	)
 }
 
-func newTable(name string, size int64, sizePretty string, rowsCountEstimate int64, databaseName string) *databaseTable {
-	sizeMetric := createSizeMetric(name, databaseName)
-	rowsCountEstimateMetric := createRowsCountEstimateMetric(name, databaseName)
+func newTable(name string, size int64, sizePretty string, rowsCountEstimate int64, databaseName string, instanceName string) *databaseTable {
+	sizeMetric := createSizeMetric(name, databaseName, instanceName)
+	rowsCountEstimateMetric := createRowsCountEstimateMetric(name, databaseName, instanceName)
 
 	return &databaseTable{
 		name:                    name,
@@ -64,7 +64,7 @@ type database struct {
 	tables []*databaseTable
 }
 
-func newDatabase(connectionStringPattern *string, name string, size int64, sizePretty string) *database {
+func newDatabase(connectionStringPattern *string, name string, size int64, sizePretty string, instanceName string) *database {
 	if connectionStringPattern == nil {
 		log.Fatal("connectionStringPattern cannot be nil")
 	}
@@ -124,7 +124,7 @@ func newDatabase(connectionStringPattern *string, name string, size int64, sizeP
 		if !ok {
 			log.Fatal("Unexpected type for rows estimate")
 		}
-		return newTable(tableName, size, sizePretty, int64(rowsCountEstimate), name)
+		return newTable(tableName, size, sizePretty, int64(rowsCountEstimate), name, instanceName)
 	})
 
 	sizeMetric := prometheus.NewDesc(
@@ -133,6 +133,7 @@ func newDatabase(connectionStringPattern *string, name string, size int64, sizeP
 		nil,
 		prometheus.Labels{
 			"database": name,
+			"instance": instanceName,
 		},
 	)
 
@@ -148,6 +149,7 @@ func newDatabase(connectionStringPattern *string, name string, size int64, sizeP
 
 type DatabasesCollector struct {
 	connectionStringPattern string
+	instanceName            string
 	databases               []*database
 	ticker                  *time.Ticker
 	tickerDone              chan bool
@@ -161,7 +163,7 @@ func isValidPostgresURL(input string) bool {
 	return validPostgresURL.MatchString(input)
 }
 
-func NewDatabasesCollector(connectionStringPattern string, updateInterval time.Duration) *DatabasesCollector {
+func NewDatabasesCollector(connectionStringPattern string, instanceName string, updateInterval time.Duration) *DatabasesCollector {
 	if !isValidPostgresURL(connectionStringPattern) {
 		log.Fatal("Invalid connection string pattern")
 	}
@@ -174,6 +176,7 @@ func NewDatabasesCollector(connectionStringPattern string, updateInterval time.D
 	// Initialize DatabasesCollector
 	collector := &DatabasesCollector{
 		connectionStringPattern: connectionStringPattern,
+		instanceName:            instanceName,
 		databases:               []*database{},
 		ticker:                  time.NewTicker(updateInterval),
 		tickerDone:              make(chan bool),
@@ -261,7 +264,7 @@ func (d *DatabasesCollector) update() error {
 				log.Printf("Query for database size failed: %v", err)
 				return nil
 			}
-			return newDatabase(&d.connectionStringPattern, name, size, sizePretty)
+			return newDatabase(&d.connectionStringPattern, name, size, sizePretty, d.instanceName)
 		})
 
 	d.databases = databases

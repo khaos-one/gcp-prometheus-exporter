@@ -16,11 +16,14 @@ import (
 )
 
 func main() {
-	c := os.Getenv("POSTGRESQL_URL_TEMPLATE")
-	if c == "" {
+	csTemplate := os.Getenv("POSTGRESQL_URL_TEMPLATE")
+	if csTemplate == "" {
 		log.Fatal("POSTGRESQL_URL_TEMPLATE environment variable is not set")
 	}
-	metrics := pgsqlprometheuscollector.NewDatabasesCollector(c, 10*time.Minute)
+
+	instanceName := os.Getenv("INSTANCE_NAME")
+
+	metrics := pgsqlprometheuscollector.NewDatabasesCollector(csTemplate, instanceName, 10*time.Minute)
 	defer metrics.Close()
 
 	r := prometheus.NewRegistry()
